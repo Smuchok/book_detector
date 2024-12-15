@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Book Detector{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+            display: flex;
+            padding: 10px 20px;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 14px 20px;
+            text-align: center;
+        }
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .navbar .active {
+            background-color: #4CAF50;
+        }
+        .content {
+            padding: 20px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="navbar">
+        <a href="{% url 'unique_books_list' %}" class="{% if request.resolver_match.url_name == 'unique_books_list' %}active{% endif %}">Unique Books</a>
+        <a href="{% url 'detect_books' %}" class="{% if request.resolver_match.url_name == 'detect_books' %}active{% endif %}">Detect Books</a>
+
+        {% if user.is_authenticated %}
+            <a href="{% url 'profile' %}" style="margin-left: auto;">Profile</a>
+            <a href="#" onclick="logout(event)">Logout ({{ user.username }})</a>
+            <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
+                {% csrf_token %}
+            </form>
+            <script>
+                function logout(event) {
+                    event.preventDefault(); // Запобігаємо переходу за посиланням
+                    document.getElementById('logout-form').submit(); // Відправляємо форму
+                }
+            </script>
+        {% else %}
+            <a href="{% url 'register' %}" style="margin-left: auto;">Register</a>
+            <a href="{% url 'login' %}">Login</a>        
+        {% endif %}
+    </div>
+    <div>
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li style="color: green;">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+    <div class="content">
+        {% block content %}
+        {% endblock %}
+    </div>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

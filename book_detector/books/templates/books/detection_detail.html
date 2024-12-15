@@ -1,0 +1,357 @@
+{% extends "books/base.html" %}
+
+{% block title %}Detection Detail{% endblock %}
+
+{% block content %}
+<div class="detection-container">
+    <div class="uploaded-image-section">
+        {% if detection.uploaded_image %}
+            <img src="{{ detection.uploaded_image.url }}" alt="Uploaded Image" class="uploaded-image">
+        {% else %}
+            <p>No uploaded image available.</p>
+        {% endif %}
+    </div>
+
+    <div class="detection-info-section">
+        <h1>
+            Detection: {{ detection.title|default:"Untitled" }}
+            <span class="detection-id-label" onclick="copyToClipboard('{{ detection.id }}')">
+                #{{ detection.id }}
+            </span>
+        </h1>
+        <p><strong>Detection Date:</strong> {{ detection.detection_date }}</p>
+        <p><strong>Description:</strong> {{ detection.description|default:"No description available." }}</p>
+
+        <div class="user-info">
+            <h2>User Information</h2>
+            <p><strong>Username:</strong> {{ detection.user.username }}</p>
+            <p><strong>First Name:</strong> {{ detection.user.first_name|default:"N/A" }}</p>
+            <p><strong>Last Name:</strong> {{ detection.user.last_name|default:"N/A" }}</p>
+        </div>
+    </div>
+</div>
+
+
+<h2>Detected Books</h2>
+<p class="hint-text">You can select books to save them as UniqueBook.</p>
+
+<form method="post" action="{% url 'save_unique_books_from_detection' detection.id %}">
+    {% csrf_token %}
+    <div class="detected-books-grid">
+        {% for book in detected_books %}
+            <div class="detected-book" data-checkbox-id="checkbox_{{ book.id }}">
+                {% if book.rotated_image %}
+                    <img src="{{ book.rotated_image.url }}" alt="Rotated Image">
+                {% else %}
+                    <p>No rotated image available.</p>
+                {% endif %}
+    
+                <!-- Checkbox (прихований) -->
+                <input 
+                    type="checkbox" 
+                    id="checkbox_{{ book.id }}" 
+                    class="select-book-checkbox" 
+                    name="selected_books" 
+                    value="{{ book.id }}" 
+                    hidden
+                >
+    
+                <!-- Fields for title and author -->
+                <div class="book-inputs" style="display: none;">
+                    <input 
+                        type="text" 
+                        name="title_{{ book.id }}" 
+                        placeholder="Enter book title" 
+                        value="{{ book.full_text|default:'' }}" 
+                        class="book-title-input"
+                    >
+                    <input 
+                        type="text" 
+                        name="author_{{ book.id }}" 
+                        placeholder="Enter author name" 
+                        value="{{ book.author|default:'' }}" 
+                        class="book-author-input"
+                    >
+                </div>
+            </div>
+        {% empty %}
+        <p>No books detected for this detection.</p>
+        {% endfor %}
+    </div>
+    
+    <button type="submit" class="save-button" disabled>Save Selected Books</button>
+</form>
+
+<a href="{% url 'unique_books_list' %}" class="back-button">Back to Unique Books</a>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+    /* Основний контейнер для фото та тексту */
+    .detection-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .uploaded-image-section {
+        flex: 1;
+        /* max-width: 400px; Максимальна ширина для фото */
+    }
+
+    .uploaded-image-section img {
+        width: 100%;
+        max-height: 400px; /* Максимальна висота для фото */
+        object-fit: contain;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+
+    .detection-info-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .detection-info-section h1 {
+        margin-top: 0;
+    }
+
+
+    /* User info */
+    .user-info {
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+
+    .user-info h2 {
+        margin-top: 0;
+    }
+
+    /* Підказка для вибору книг */
+    .hint-text {
+        font-size: 14px;
+        color: gray;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+
+    /* Сітка для Detected Books */
+    .detected-books-grid {
+        display: grid;
+        grid-gap: 20px;
+    }
+
+    /* Ширина для великих екранів */
+    @media (min-width: 1200px) {
+        .detected-books-grid {
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        }
+    }
+
+    /* Ширина для середніх екранів */
+    @media (min-width: 768px) and (max-width: 1199px) {
+        .detected-books-grid {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+    }
+
+    /* Ширина для маленьких екранів */
+    @media (max-width: 767px) {
+        .detected-books-grid {
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        }
+    }
+
+    .detected-book {
+        text-align: center;
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+        cursor: pointer; /* Додаємо курсор для натискання */
+    }
+
+    .detected-book.selected {
+        background: #e0f7fa; /* Виділення вибраної книги */
+        border-color: #007bff;
+    }
+
+    .detected-book img {
+        max-width: 100%;
+        max-height: 200px;
+        border-radius: 5px;
+        object-fit: contain;
+    }
+
+    /* Приховуємо чекбокс */
+    .select-book-checkbox {
+        display: none;
+    }
+
+
+    .detected-book:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+
+    /* Bo */
+    .book-inputs {
+        margin-top: 10px;
+    }
+
+    .book-inputs input {
+        display: block;
+        margin: 5px 0;
+        width: 94%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    /* Кнопка збереження */
+    .save-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        z-index: 1000;
+    }
+
+    .save-button:disabled {
+        background: #ccc; /* Сірий фон для неактивної кнопки */
+        cursor: not-allowed;
+    }
+
+    .save-button:hover:enabled {
+        background: #0056b3;
+        transform: scale(1.05); /* Трохи збільшується при наведенні */
+    }
+
+
+    /* Кнопка назад */
+    .back-button {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: #0056b3;
+    }
+
+    /* Адаптивність */
+    @media (max-width: 768px) {
+        .detection-container {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .uploaded-image-section {
+            max-width: 100%;
+        }
+
+        .uploaded-image-section img {
+            max-height: 300px;
+        }
+
+        .detection-info-section {
+            flex: unset;
+            width: 100%;
+        }
+
+        .detected-books-grid {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        }
+    }
+</style>
+
+<style>
+.detection-id-label {
+    font-size: 14px;
+    color: gray;
+    margin-left: 10px;
+    cursor: pointer;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 2px 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.detection-id-label:hover {
+    background: #e0e0e0;
+    color: black;
+}
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+function updateSaveButtonState() {
+    const saveButton = document.querySelector('.save-button');
+    const anyChecked = document.querySelectorAll('.select-book-checkbox:checked').length > 0;
+    saveButton.disabled = !anyChecked; // Кнопка активна, якщо хоча б один чекбокс обраний
+}
+
+// Виклик функції `updateSaveButtonState` для початкового встановлення стану кнопки
+updateSaveButtonState();
+
+// Оновлюємо стан кнопки при зміні чекбоксів
+document.querySelectorAll('.select-book-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSaveButtonState);
+});
+
+
+document.querySelectorAll('.detected-book').forEach(book => {
+    book.addEventListener('click', function () {
+        const checkboxId = this.dataset.checkboxId;
+        const checkbox = document.getElementById(checkboxId);
+
+        checkbox.checked = !checkbox.checked; // Змінюємо стан чекбокса
+        updateSaveButtonState(); // Оновлюємо стан кнопки збереження
+
+        // Додаємо або видаляємо клас "selected"
+        if (checkbox.checked) {
+            this.classList.add('selected');
+            this.querySelector('.book-inputs').style.display = 'block';
+        } else {
+            this.classList.remove('selected');
+            this.querySelector('.book-inputs').style.display = 'none';
+        }
+    });
+});
+</script>
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Detection ID copied to clipboard: ' + text);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    }
+</script>
+{% endblock %}

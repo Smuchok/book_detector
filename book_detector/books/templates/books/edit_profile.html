@@ -1,0 +1,115 @@
+{% extends "books/base.html" %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="edit-profile-container">
+    <h2>Edit Profile</h2>
+
+    <!-- Форма редагування профілю -->
+    <form method="post" class="edit-profile-form">
+        {% csrf_token %}
+        <div class="form-group">
+            {{ form.as_p }}
+        </div>
+
+        <button type="submit" class="save-button">Save Changes</button>
+    </form>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+/* Допоміжна інформація */
+.helptext {
+    font-size: 12px;
+    color: gray;
+    margin-top: 5px;
+}
+
+/* Контейнер для сторінки */
+.edit-profile-container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Заголовок */
+.edit-profile-container h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: #333;
+}
+
+/* Поля форми */
+.edit-profile-form .form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.edit-profile-form label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #555;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.edit-profile-form input,
+.edit-profile-form select {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.edit-profile-form input:focus,
+.edit-profile-form select:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Кнопка збереження */
+.save-button {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 16px;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.save-button:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
+
+.save-button:active {
+    transform: scale(1);
+}
+
+/* Адаптивність */
+@media (max-width: 768px) {
+    .edit-profile-container {
+        padding: 15px;
+    }
+
+    .save-button {
+        font-size: 14px;
+    }
+}
+</style>
+{% endblock %}

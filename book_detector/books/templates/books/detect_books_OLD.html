@@ -1,0 +1,79 @@
+{% extends "books/base.html" %}
+
+{% block title %}Detected Books{% endblock %}
+
+{% block content %}
+<h1>Detected Books</h1>
+<img src="{{ uploaded_image }}" alt="Uploaded Image" style="max-height: 400px;">
+{% if detection %}
+    <div class="detection-info">
+        <p>
+            Detection created:
+            <a href="{% url 'detection_detail' detection.id %}" class="detection-link">
+                Detection #{{ detection.id }}
+            </a>
+        </p>
+    </div>
+{% endif %}
+<hr>
+
+<form method="POST" action="{% url 'save_books' %}">
+    {% csrf_token %}
+    {{ save_books_form.as_p }}
+    <table>
+        <thead>
+            <tr>
+                <th>Select</th>
+                <!-- <th>Cropped Image</th> -->
+                <th>Rotated Image</th>
+                <th>Book Name</th>
+                <th>Author</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obj in detected_objects %}
+            <tr>
+                <td>
+                    <input type="checkbox" name="selected_books" value="{{ obj.id }}">
+                </td>
+                <!-- <td>
+                    <img src="{{ obj.cropped_image_url }}" alt="Cropped Book" style="max-width: 100px;">
+                </td> -->
+                <td>
+                    <img src="{{ obj.rotated_image_url }}" alt="Rotated Book" style="max-width: 200px;">
+                </td>
+                <td>
+                    <input type="text" name="title_{{ obj.id }}" value="{{ obj.full_text }}">
+                </td>
+                <td>
+                    <input type="text" name="author_{{ obj.id }}" value="{{ obj.author|default:'' }}" placeholder="Enter author name">
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <input type="hidden" name="detection_id" value="{{ detection.id }}">
+    <button type="submit">Save Selected Books</button>
+</form>
+{% endblock %}
+
+
+<!-- Detection link -->
+<style>
+.detection-info {
+    margin: 20px 0;
+    font-size: 16px;
+    color: gray;
+}
+
+.detection-info a.detection-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.detection-info a.detection-link:hover {
+    color: #0056b3;
+}
+</style>

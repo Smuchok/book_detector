@@ -1,0 +1,448 @@
+{% extends "books/base.html" %}
+
+{% block title %}My Unique Books{% endblock %}
+
+{% block content %}
+<div class="tab-container">
+    <!-- Вкладки зліва -->
+    <div class="tabs">
+        <button class="tab-button active" data-tab="unique-books-tab">UniqueBooks</button>
+        <button class="tab-button" data-tab="detections-tab">Detections</button>
+    </div>
+
+    <!-- Контент вкладок -->
+    <div class="tab-content">
+        <!-- UniqueBooks -->
+        <div id="unique-books-tab" class="tab-panel active">
+            <div class="bookshelf">
+                {% for book in unique_books %}
+                    <div class="book" data-title="{{ book.title }}" data-author="{{ book.author|default:'Unknown' }}">
+                        <a href="{% url 'unique_book_detail' book.id %}" class="book">
+                            {% if book.cropped_image %}
+                                <img src="{{ book.cropped_image.url }}" alt="Cropped Image">
+                            {% else %}
+                                <p>No Image</p>
+                            {% endif %}
+                        </a>
+                    </div>
+                {% empty %}
+                <p>No unique books found.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Detections -->
+        <div id="detections-tab" class="tab-panel">
+            <div class="detections-list">
+                {% for detection in detections %}
+                    <div class="detection-item">
+                        <!-- Ліва колонка: Фото -->
+                        <div class="detection-image">
+                            {% if detection.uploaded_image %}
+                                <img src="{{ detection.uploaded_image.url }}" alt="Detection Image">
+                            {% else %}
+                                <p>No image available.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Права колонка: Інформація -->
+                        <div class="detection-info">
+                            <h2>
+                                {{ detection.title|default:"Untitled" }}
+                                <span class="detection-id-label" onclick="copyToClipboard('{{ detection.id }}')">
+                                    #{{ detection.id }}
+                                </span>
+                            </h2>
+                            <p>
+                                <strong>User:</strong> {{ detection.user.username }}
+                                {% if detection.user.email %}
+                                    <span class="user-email">({{ detection.user.email }})</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Date:</strong> {{ detection.detection_date }}</p>
+                            <a href="{% url 'detection_detail' detection.id %}" class="detection-link">View Detection</a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p>No detections found.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Контейнер для відображення підказки -->
+<div id="book-tooltip" style="display: none;"></div>
+
+
+<!-- Модальне вікно для прев'ю -->
+<div id="image-modal" class="image-modal">
+    <span class="close-button">&times;</span>
+    <img class="modal-content" id="modal-image">
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.bookshelf {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    white-space: nowrap; /* Горизонтальний скрол */
+    height: calc(100vh - 80px); /* Висота екрана мінус висота navbar */
+    align-items: center; /* Центрування книг по вертикалі */
+    box-sizing: border-box; /* Враховує padding у висоті */
+}
+
+.bookshelf::-webkit-scrollbar {
+    height: 8px; /* Висота скролу */
+}
+
+.bookshelf::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+.bookshelf::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.book {
+    display: inline-block;
+    text-align: center;
+    flex-shrink: 0; /* Забороняє масштабування книги при прокрутці */
+    max-height: 90%; /* Висота книги пропорційна висоті полиці */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    overflow: hidden; /* Забезпечує обрізання вмісту, якщо потрібно */
+}
+
+.book:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.book img {
+    max-height: 100%; /* Висота адаптується до батьківського контейнера */
+    max-width: 100%; /* Ширина також адаптується */
+    object-fit: contain; /* Забезпечує пропорційне вписування без обрізання */
+    margin: auto;
+    border-radius: 3px;
+}
+
+/* Стилі для підказки */
+#book-tooltip {
+    position: fixed;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 14px;
+    border-radius: 5px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+}
+#book-tooltip {
+    max-width: 200px;
+    word-wrap: break-word; /* Перенос тексту при необхідності */
+}
+
+</style>
+
+<!-- Tab -->
+<style>
+.tab-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.tabs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+    background: #f5f5f5;
+    border-right: 1px solid #ddd;
+}
+
+.tab-button {
+    writing-mode: vertical-rl; /* Текст вертикально */
+    transform: rotate(180deg); /* Обертання тексту */
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+.tab-button.active {
+    background: #007bff;
+    color: white;
+    border-left: 3px solid #0056b3;
+}
+
+.tab-button:hover {
+    background: #e0e0e0;
+}
+
+.tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #fff;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+</style>
+
+<style>
+.detections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.detection-item {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    /* transition: transform 0.2s ease, box-shadow 0.2s ease; */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.detection-item:hover {
+    background-color: #e0f7fa; /* Новий фон при наведенні */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+.detection-image {
+    flex: 0 0 150px; /* Фіксований розмір квадратного фото */
+    height: 150px;
+    overflow: hidden;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+}
+
+.detection-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Обрізає зображення, щоб воно заповнило квадрат */
+    object-position: center; /* Вирівнює зображення по центру */
+    transition: transform 0.3s ease; /* Анімація збільшення */
+}
+
+.detection-image img:hover {
+    transform: scale(1.1); /* Збільшення фото */
+}
+
+
+.detection-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* justify-content: space-between; */
+    gap: 5px;
+}
+
+.detection-info h2 {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detection-info p {
+    margin: 0px 0; /* Зменшуємо вертикальні відступи */
+    line-height: 1.4; /* Оптимальна висота рядка */
+}
+
+.detection-id-label {
+    font-size: 14px;
+    color: gray;
+    margin-left: 10px;
+    cursor: pointer;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 2px 5px;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.detection-id-label:hover {
+    background: #e0e0e0;
+    color: black;
+}
+
+.detection-link {
+    color: #007bff;
+    text-decoration: none;
+    align-self: flex-start;
+    margin-top: 7px;
+}
+
+.detection-link:hover {
+    text-decoration: underline;
+}
+
+.user-email {
+    font-size: 12px; /* Зменшений розмір шрифту */
+    color: gray; /* Світлий сірий колір */
+    margin-left: 5px; /* Невеликий відступ від імені користувача */
+    font-style: italic; /* Курсив для меншої помітності */
+}
+</style>
+
+<!-- Modal preview -->
+<style>
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease; /* Анімація появи */
+}
+
+.image-modal.show {
+    display: flex;
+    opacity: 1; /* Плавний перехід до видимого стану */
+}
+
+.modal-content {
+    max-width: 80%;
+    max-height: 80%;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease; /* Анімація збільшення */
+}
+
+.modal-content.show {
+    transform: scale(1.05); /* Легке збільшення при появі */
+}
+
+.close-button {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    color: white;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tooltip = document.getElementById('book-tooltip');
+        const books = document.querySelectorAll('.book');
+
+        books.forEach(book => {
+            book.addEventListener('mousemove', (event) => {
+                const title = book.getAttribute('data-title');
+                const author = book.getAttribute('data-author');
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${event.pageX + 15}px`;
+                tooltip.style.top = `${event.pageY + 15}px`;
+                tooltip.innerHTML = `<strong>${title}</strong><br><em>${author}</em>`;
+            });
+
+            book.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+        });
+    });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.tab-button');
+    const panels = document.querySelectorAll('.tab-panel');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Знімаємо активний стан з усіх вкладок
+            tabs.forEach(t => t.classList.remove('active'));
+            panels.forEach(p => p.classList.remove('active'));
+
+            // Активуємо обрану вкладку
+            tab.classList.add('active');
+            const target = document.getElementById(tab.dataset.tab);
+            target.classList.add('active');
+        });
+    });
+});
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Detection ID copied to clipboard: ' + text);
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
+}
+</script>
+
+<!-- Modal preview -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('image-modal');
+    const modalImg = document.getElementById('modal-image');
+    const closeButton = document.querySelector('.close-button');
+
+    document.querySelectorAll('.detection-image img').forEach(img => {
+        img.addEventListener('click', () => {
+            modal.style.display = 'flex';
+            modalImg.src = img.src;
+            modal.classList.add('show'); // Додаємо клас для анімації
+        });
+    });
+
+    closeButton.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300); // Відкладення для завершення анімації
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+    });
+});
+</script>
+{% endblock %}

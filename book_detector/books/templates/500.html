@@ -1,0 +1,9 @@
+{% extends "books/base.html" %}
+
+{% block title %}Server Error{% endblock %}
+
+{% block content %}
+    <h1>Error 500: Server Error</h1>
+    <p>Something went wrong on our end. Please try again later.</p>
+    <p><a href="{% url 'detect_books' %}">Go back to Home</a></p>
+{% endblock %}

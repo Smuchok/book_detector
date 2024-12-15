@@ -1,0 +1,57 @@
+# Системні файли
+*.pyc
+__pycache__/
+.DS_Store
+.env
+
+# Бази даних
+db.sqlite3
+
+# Папки з медіа- та статичними файлами
+/media/
+/staticfiles/
+
+# Налаштування IDE
+.idea/
+.vscode/
+
+# Логи та тимчасові файли
+*.log
+*.bak
+*.swp
+*.tmp
+
+# Віртуальне середовище Python
+venv/
+
+# Python файли
+*.pyc
+__pycache__/
+
+# Секрети
+.env
+
+# SQLite база даних
+db.sqlite3
+
+# Логи
+*.log
+
+# Статичні та медіа файли
+/media/
+staticfiles/
+
+# Віртуальне середовище
+venv/
+
+# IDE та інші конфігурації
+.idea/
+.vscode/
+
+# Системні файли
+.DS_Store
+Thumbs.db
+
+# Інше
+backup-full-2024-11-25.zip
+secret.py

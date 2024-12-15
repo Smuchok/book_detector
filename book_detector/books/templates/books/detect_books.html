@@ -1,0 +1,381 @@
+{% extends "books/base.html" %}
+
+{% block title %}Detected Books{% endblock %}
+
+{% block content %}
+<div class="detected-books-container">
+    <h1>Detected Books</h1>
+
+    <!-- Зображення, яке було завантажене -->
+    <div class="uploaded-image-container">
+        <img src="{{ uploaded_image }}" alt="Uploaded Image">
+    </div>
+
+    <!-- Інформація про детекцію -->
+    {% if detection %}
+        <div class="detection-info">
+            <p>
+                Detection created:
+                <a href="{% url 'detection_detail' detection.id %}" class="detection-link">
+                    Detection #{{ detection.id }}
+                </a>
+            </p>
+        </div>
+    {% endif %}
+    <hr>
+
+    <!-- Форма для збереження вибраних книг -->
+    <form method="POST" action="{% url 'save_books' %}" id="detected-books-form">
+        {% csrf_token %}
+        {{ save_books_form.as_p }}
+
+        <!-- Кнопки для вибору всіх/зняття вибору -->
+        <div class="checkbox-controls">
+            <button type="button" id="select-all" class="control-button">Select All</button>
+            <button type="button" id="deselect-all" class="control-button">Deselect All</button>
+        </div>
+
+        <table class="detected-books-table">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Rotated Image</th>
+                    <th>Book Name</th>
+                    <th>Author</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obj in detected_objects %}
+                <tr>
+                    <td>
+                        <input type="checkbox" name="selected_books" value="{{ obj.id }}" class="book-checkbox">
+                    </td>
+                    <td>
+                        <img src="{{ obj.rotated_image_url }}" alt="Rotated Book" class="rotated-image" onclick="openModal(this)">
+                    </td>
+                    <td>
+                        <input type="text" name="title_{{ obj.id }}" value="{{ obj.full_text }}">
+                    </td>
+                    <td>
+                        <input type="text" name="author_{{ obj.id }}" value="{{ obj.author|default:'' }}" placeholder="Enter author name">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <input type="hidden" name="detection_id" value="{{ detection.id }}">
+
+        <!-- Кнопка збереження -->
+        <button type="submit" class="floating-save-button" disabled>Save Selected Books</button>
+    </form>
+</div>
+
+<div id="image-modal" class="modal">
+    <span class="modal-close">&times;</span>
+    <img class="modal-content" id="modal-image">
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<!-- СТИЛІ -->
+<style>
+.detected-books-container {
+    max-width: 800px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.uploaded-image-container img {
+    max-width: 100%;
+    max-height: 400px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.detected-books-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.detected-books-table th,
+.detected-books-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.detected-books-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.detected-books-table img {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 5px;
+}
+
+.detected-books-table input[type="text"] {
+    width: 90%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Дизайн кнопки */
+.floating-save-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    z-index: 1000;
+}
+
+.floating-save-button:hover:enabled {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
+
+.floating-save-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Інформація про детекцію */
+.detection-info {
+    margin: 20px 0;
+    font-size: 16px;
+    color: gray;
+}
+
+.detection-info a.detection-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.detection-info a.detection-link:hover {
+    color: #0056b3;
+}
+
+/* Ефект при наведенні на rotated_image */
+.rotated-image {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.rotated-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+</style>
+
+<!-- СТИЛІ Кнопки для вибору всіх/зняття вибору  -->
+<style>
+.checkbox-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.control-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.control-button:hover {
+    background-color: #0056b3;
+}
+</style>
+    
+<!-- МОДАЛЬНЕ ВІКНО -->
+<style>
+/* Модальне вікно */
+.modal {
+    display: none; /* Приховане за замовчуванням */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Напівпрозорий фон */
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal.fade-out {
+    animation: fadeOut 0.3s ease;
+}
+
+/* Контент модального вікна */
+.modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9); /* Початкове масштабування */
+    animation: scaleIn 0.3s ease;
+}
+
+/* Закриття модального вікна */
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    color: white;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.modal-close:hover {
+    color: #ccc;
+}
+
+
+/* Анімації */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
+<!-- СКРИПТ -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkboxes = document.querySelectorAll('.book-checkbox');
+    const saveButton = document.querySelector('.floating-save-button');
+
+    function updateSaveButtonState() {
+        const isChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+        saveButton.disabled = !isChecked; // Кнопка активується, якщо вибрано хоча б один чекбокс
+    }
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSaveButtonState);
+    });
+
+    // Перевірити стан кнопки під час завантаження сторінки
+    updateSaveButtonState();
+});
+</script>
+
+<!-- СКРИПТ Кнопки для вибору всіх/зняття вибору  -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkboxes = document.querySelectorAll('.book-checkbox');
+    const saveButton = document.querySelector('.floating-save-button');
+    const selectAllButton = document.getElementById('select-all');
+    const deselectAllButton = document.getElementById('deselect-all');
+
+    // Функція оновлення стану кнопки збереження
+    function updateSaveButtonState() {
+        const isChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+        saveButton.disabled = !isChecked; // Кнопка активується, якщо вибрано хоча б один чекбокс
+    }
+
+    // Обробник для вибору всіх чекбоксів
+    selectAllButton.addEventListener('click', function () {
+        checkboxes.forEach(checkbox => checkbox.checked = true);
+        updateSaveButtonState();
+    });
+
+    // Обробник для зняття вибору з усіх чекбоксів
+    deselectAllButton.addEventListener('click', function () {
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+        updateSaveButtonState();
+    });
+
+    // Оновлення стану кнопки при зміні стану чекбокса
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSaveButtonState);
+    });
+
+    // Перевірити стан кнопки під час завантаження сторінки
+    updateSaveButtonState();
+});
+</script>
+    
+<!-- МОДАЛЬНЕ ВІКНО -->
+<script>
+function openModal(imgElement) {
+    const modal = document.getElementById('image-modal');
+    const modalImage = document.getElementById('modal-image');
+    
+    // Встановлюємо джерело зображення для модального вікна
+    modalImage.src = imgElement.src;
+    modal.style.display = 'flex'; // Використовуємо flex для центрування
+    modal.classList.remove('fade-out'); // Видаляємо анімацію зникання, якщо була
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('image-modal');
+    const closeButton = document.querySelector('.modal-close');
+
+    // Закриття модального вікна
+    closeButton.addEventListener('click', function () {
+        modal.classList.add('fade-out'); // Додаємо анімацію зникання
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300); // Час анімації fadeOut
+    });
+
+    // Закриваємо модальне вікно при натисканні поза його межами
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal) {
+            modal.classList.add('fade-out'); // Додаємо анімацію зникання
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300); // Час анімації fadeOut
+        }
+    });
+});
+</script>
+{% endblock %}

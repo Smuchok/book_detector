@@ -1,0 +1,123 @@
+{% extends "books/base.html" %}
+
+{% block title %}Unique Books{% endblock %}
+
+{% block extra_css %}
+<style>
+.bookshelf {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    white-space: nowrap; /* Горизонтальний скрол */
+    height: calc(100vh - 80px); /* Висота екрана мінус висота navbar */
+    align-items: center; /* Центрування книг по вертикалі */
+    box-sizing: border-box; /* Враховує padding у висоті */
+}
+
+.bookshelf::-webkit-scrollbar {
+    height: 8px; /* Висота скролу */
+}
+
+.bookshelf::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+.bookshelf::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.book {
+    display: inline-block;
+    text-align: center;
+    flex-shrink: 0; /* Забороняє масштабування книги при прокрутці */
+    max-height: 90%; /* Висота книги пропорційна висоті полиці */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    overflow: hidden; /* Забезпечує обрізання вмісту, якщо потрібно */
+}
+
+.book:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.book img {
+    max-height: 100%; /* Висота адаптується до батьківського контейнера */
+    max-width: 100%; /* Ширина також адаптується */
+    object-fit: contain; /* Забезпечує пропорційне вписування без обрізання */
+    margin: auto;
+    border-radius: 3px;
+}
+
+/* Стилі для підказки */
+#book-tooltip {
+    position: fixed;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 14px;
+    border-radius: 5px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+}
+#book-tooltip {
+    max-width: 200px;
+    word-wrap: break-word; /* Перенос тексту при необхідності */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- <h1>Unique Books</h1> -->
+
+<div class="bookshelf">
+    {% for book in unique_books %}
+        <div class="book" data-title="{{ book.title }}" data-author="{{ book.author|default:'Unknown' }}">
+            <a href="{% url 'unique_book_detail' book.id %}" class="book">
+                {% if book.cropped_image %}
+                    <img src="{{ book.cropped_image.url }}" alt="Cropped Image">
+                {% else %}
+                    <p>No Image</p>
+                {% endif %}
+            </a>
+        </div>
+    {% empty %}
+    <p>No unique books found.</p>
+    {% endfor %}
+</div>
+
+<!-- Контейнер для відображення підказки -->
+<div id="book-tooltip" style="display: none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tooltip = document.getElementById('book-tooltip');
+        const books = document.querySelectorAll('.book');
+
+        books.forEach(book => {
+            book.addEventListener('mousemove', (event) => {
+                const title = book.getAttribute('data-title');
+                const author = book.getAttribute('data-author');
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${event.pageX + 15}px`;
+                tooltip.style.top = `${event.pageY + 15}px`;
+                tooltip.innerHTML = `<strong>${title}</strong><br><em>${author}</em>`;
+            });
+
+            book.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}
